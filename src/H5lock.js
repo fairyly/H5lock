@@ -3,56 +3,28 @@
             this.height = obj.height;
             this.width = obj.width;
             this.chooseType = Number(window.localStorage.getItem('chooseType')) || obj.chooseType;
+            this.devicePixelRatio = window.devicePixelRatio || 1;
         };
 
-        function getDis(a, b) {
-            return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
-        };
 
-        H5lock.prototype.pickPoints = function(fromPt, toPt) {
-            var lineLength = getDis(fromPt, toPt);
-            var dir = toPt.index > fromPt.index ? 1 : -1;
-
-            var len = this.restPoint.length;
-            var i = dir === 1 ? 0 : (len - 1);
-            var limit = dir === 1 ? len : -1;
-
-            while (i !== limit) {
-                var pt = this.restPoint[i];
-
-                if (getDis(pt, fromPt) + getDis(pt, toPt) === lineLength) {
-                    this.drawPoint(pt.x, pt.y);
-                    this.lastPoint.push(pt);
-                    this.restPoint.splice(i, 1);
-                    if (limit > 0) {
-                        i--;
-                        limit--;
-                    }
-                }
-
-                i+=dir;
-            }
-        }
-
-        H5lock.prototype.drawCle = function(x, y) { // 初始化解锁密码面板
-            this.ctx.strokeStyle = '#CFE6FF';
+        H5lock.prototype.drawCle = function(x, y) { // 初始化解锁密码面板 小圆圈
+            this.ctx.strokeStyle = '#87888a';//密码的点点默认的颜色
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
             this.ctx.arc(x, y, this.r, 0, Math.PI * 2, true);
             this.ctx.closePath();
             this.ctx.stroke();
         }
-        H5lock.prototype.drawPoint = function() { // 初始化圆心
+        H5lock.prototype.drawPoint = function(style) { // 初始化圆心
             for (var i = 0 ; i < this.lastPoint.length ; i++) {
-                this.ctx.fillStyle = '#CFE6FF';
+                this.ctx.fillStyle = style;
                 this.ctx.beginPath();
-                this.ctx.arc(this.lastPoint[i].x, this.lastPoint[i].y, this.r / 2, 0, Math.PI * 2, true);
+                this.ctx.arc(this.lastPoint[i].x, this.lastPoint[i].y, this.r / 2.5, 0, Math.PI * 2, true);
                 this.ctx.closePath();
                 this.ctx.fill();
             }
         }
         H5lock.prototype.drawStatusPoint = function(type) { // 初始化状态线条
-
             for (var i = 0 ; i < this.lastPoint.length ; i++) {
                 this.ctx.strokeStyle = type;
                 this.ctx.beginPath();
@@ -61,11 +33,12 @@
                 this.ctx.stroke();
             }
         }
-        H5lock.prototype.drawLine = function(po, lastPoint) {// 解锁轨迹
+        H5lock.prototype.drawLine = function(style, po, lastPoint) {//style:颜色 解锁轨迹
             this.ctx.beginPath();
+            this.ctx.strokeStyle = style;
             this.ctx.lineWidth = 3;
             this.ctx.moveTo(this.lastPoint[0].x, this.lastPoint[0].y);
-            console.log(this.lastPoint.length);
+
             for (var i = 1 ; i < this.lastPoint.length ; i++) {
                 this.ctx.lineTo(this.lastPoint[i].x, this.lastPoint[i].y);
             }
@@ -78,7 +51,7 @@
 
             var n = this.chooseType;
             var count = 0;
-            this.r = this.ctx.canvas.width / (2 + 4 * n);// 公式计算
+            this.r = this.ctx.canvas.width / (1 + 4 * n);// 公式计算
             this.lastPoint = [];
             this.arr = [];
             this.restPoint = [];
@@ -104,8 +77,8 @@
         H5lock.prototype.getPosition = function(e) {// 获取touch点相对于canvas的坐标
             var rect = e.currentTarget.getBoundingClientRect();
             var po = {
-                x: e.touches[0].clientX - rect.left,
-                y: e.touches[0].clientY - rect.top
+                x: (e.touches[0].clientX - rect.left)*this.devicePixelRatio,
+                y: (e.touches[0].clientY - rect.top)*this.devicePixelRatio
               };
             return po;
         }
@@ -116,15 +89,20 @@
                 this.drawCle(this.arr[i].x, this.arr[i].y);
             }
 
-            this.drawPoint(this.lastPoint);// 每帧花轨迹
-            this.drawLine(po , this.lastPoint);// 每帧画圆心
+            this.drawPoint('#27AED5');// 每帧花轨迹
+            this.drawStatusPoint('#27AED5');// 每帧花轨迹
+
+            this.drawLine('#27AED5',po , this.lastPoint);// 每帧画圆心
+
+// if (this.lastPoint.length == 4) {
+//     // debugger
+// }
 
             for (var i = 0 ; i < this.restPoint.length ; i++) {
-                var pt = this.restPoint[i];
-
-                if (Math.abs(po.x - pt.x) < this.r && Math.abs(po.y - pt.y) < this.r) {
-                    this.drawPoint(pt.x, pt.y);
-                    this.pickPoints(this.lastPoint[this.lastPoint.length - 1], pt);
+                if (Math.abs(po.x - this.restPoint[i].x) < this.r && Math.abs(po.y - this.restPoint[i].y) < this.r) {
+                    this.drawPoint(this.restPoint[i].x, this.restPoint[i].y);
+                    this.lastPoint.push(this.restPoint[i]);
+                    this.restPoint.splice(i, 1);
                     break;
                 }
             }
@@ -142,26 +120,54 @@
             return p1 === p2;
         }
         H5lock.prototype.storePass = function(psw) {// touchend结束之后对密码和状态的处理
+
             if (this.pswObj.step == 1) {
                 if (this.checkPass(this.pswObj.fpassword, psw)) {
                     this.pswObj.step = 2;
                     this.pswObj.spassword = psw;
                     document.getElementById('title').innerHTML = '密码保存成功';
+                    
+
                     this.drawStatusPoint('#2CFF26');
+                     this.drawPoint('#2CFF26');
                     window.localStorage.setItem('passwordxx', JSON.stringify(this.pswObj.spassword));
                     window.localStorage.setItem('chooseType', this.chooseType);
                 } else {
                     document.getElementById('title').innerHTML = '两次不一致，重新输入';
                     this.drawStatusPoint('red');
+                     this.drawPoint('red');
                     delete this.pswObj.step;
                 }
             } else if (this.pswObj.step == 2) {
                 if (this.checkPass(this.pswObj.spassword, psw)) {
-                    document.getElementById('title').innerHTML = '解锁成功';
-                    this.drawStatusPoint('#2CFF26');
+                    var title = document.getElementById("title");
+                    title.style.color = "#2CFF26";
+                    title.innerHTML = '解锁成功';
+
+                    this.drawStatusPoint('#2CFF26');//小点点外圈高亮
+                    this.drawPoint('#2CFF26');
+                    this.drawLine('#2CFF26',this.lastPoint[this.lastPoint.length-1] , this.lastPoint);// 每帧画圆心
+                    
+
+                } else if (psw.length < 4) {
+                    
+                    this.drawStatusPoint('red');
+                    this.drawPoint('red');
+                    this.drawLine('red',this.lastPoint[this.lastPoint.length-1] , this.lastPoint);// 每帧画圆心
+
+                    var title = document.getElementById("title");
+                    title.style.color = "red";
+                    title.innerHTML = '请连接4个点';
+
                 } else {
                     this.drawStatusPoint('red');
-                    document.getElementById('title').innerHTML = '解锁失败';
+                    this.drawPoint('red');
+                    this.drawLine('red',this.lastPoint[this.lastPoint.length-1] , this.lastPoint);// 每帧画圆心
+
+
+                    var title = document.getElementById("title");
+                    title.style.color = "red";
+                    title.innerHTML = '密码错误，您还可以输入N次';
                 }
             } else {
                 this.pswObj.step = 1;
@@ -174,7 +180,11 @@
             if (this.pswObj.step == 2) {
                 document.getElementById('updatePassword').style.display = 'block';
                 //document.getElementById('chooseType').style.display = 'none';
-                document.getElementById('title').innerHTML = '请解锁';
+
+                var title = document.getElementById("title");
+                title.style.color = "#87888a";
+                title.innerHTML = '请解锁';
+
             } else if (this.pswObj.step == 1) {
                 //document.getElementById('chooseType').style.display = 'none';
                 document.getElementById('updatePassword').style.display = 'none';
@@ -196,12 +206,28 @@
         }
         H5lock.prototype.initDom = function(){
             var wrap = document.createElement('div');
-            var str = '<h4 id="title" class="title">绘制解锁图案</h4>'+
-                      '<a id="updatePassword" style="position: absolute;right: 5px;top: 5px;color:#fff;font-size: 10px;display:none;">重置密码</a>'+
-                      '<canvas id="canvas" width="300" height="300" style="background-color: #305066;display: inline-block;margin-top: 15px;"></canvas>';
+            var str = '<h4 id="title" class="title" style="color:#87888a">请绘制您的图形密码</h4>'+
+                      '<a id="updatePassword" style="position: absolute;right: 5px;top: 5px;color:#fff;font-size: 10px;display:none;">重置密码</a>';
+
             wrap.setAttribute('style','position: absolute;top:0;left:0;right:0;bottom:0;');
+            var canvas = document.createElement('canvas');
+            canvas.setAttribute('id','canvas');
+            canvas.style.cssText = 'background-color: #000;display: inline-block;margin-top: 76px;';
             wrap.innerHTML = str;
+            wrap.appendChild(canvas);
+
+            var width = this.width || 320;
+            var height = this.height || 320;
+            
             document.body.appendChild(wrap);
+
+            // 高清屏锁放
+            canvas.style.width = width + "px";
+            canvas.style.height = height + "px";
+            canvas.height = height * this.devicePixelRatio;
+            canvas.width = width * this.devicePixelRatio;
+            
+
         }
         H5lock.prototype.init = function() {
             this.initDom();
@@ -226,7 +252,7 @@
             this.canvas.addEventListener("touchstart", function (e) {
                 e.preventDefault();// 某些android 的 touchmove不宜触发 所以增加此行代码
                  var po = self.getPosition(e);
-                 console.log(po);
+
                  for (var i = 0 ; i < self.arr.length ; i++) {
                     if (Math.abs(po.x - self.arr[i].x) < self.r && Math.abs(po.y - self.arr[i].y) < self.r) {
 
@@ -250,14 +276,12 @@
                      setTimeout(function(){
 
                         self.reset();
-                    }, 300);
+                    }, 1000);
                  }
 
 
              }, false);
-             document.addEventListener('touchmove', function(e){
-                e.preventDefault();
-             },false);
+
              document.getElementById('updatePassword').addEventListener('click', function(){
                  self.updatePassword();
               });

@@ -1,10 +1,19 @@
 # H5lock
-##Demo
-<img src="http://lvming6816077.github.io/H5FullscreenPage/H5lockdemo/1436713975.png" />
-##How to use?
 
-<pre><code>
-&ltscript type="text/javascript" src="src/H5lock.publish.js"></script>
+## Demo
+
+<img src="http://lvming6816077.github.io/H5FullscreenPage/H5lockdemo/1436713975.png" />
+
+## Demo
+
+<img width="375" height="667" src="https://raw.githubusercontent.com/guntertien/H5lock/master/image/p1.jpeg" />
+<img width="375" height="667" src="https://raw.githubusercontent.com/guntertien/H5lock/master/image/p2.jpeg" />
+<img width="375" height="667" src="https://raw.githubusercontent.com/guntertien/H5lock/master/image/p3.jpeg" />
+
+## How to use?
+
+```
+<script type="text/javascript" src="src/H5lock.publish.js"></script>
 var opt = {
   chooseType: 3, // 3 , 4 , 5,
   width: 300, // lock wrap width
@@ -14,15 +23,21 @@ var opt = {
 }
 var lock = new H5lock(opt);
 lock.init();
-</code>
-</pre>
+```
 
-##Option method
-<pre><code>
+## Option method
+
+```
 lock.drawStatusPoint('notright') // draw the last notright circle
 
 lock.drawStatusPoint('right') // draw the last right circle
 
 lock.reset() // reset the lock
-</code>
-</pre>
+```
+## Support Vue
+
+```
+> Address[vue-lock](https://github.com/guntertien/vue-lock)
+
+```
+
